@@ -1,9 +1,12 @@
 #include <QCoreApplication>
-#include <QLocalSocket>
+#include <QHostAddress>
+#include <QUdpSocket>
 #include <QDate>
 #include <stdio.h>
 
-const QString FP_PIPE_NAME = "FP_Pipe";
+//const QString FP_PIPE_NAME = "FP_Pipe";
+const QString LOCALHOST_IP = "127.0.0.1";
+const quint16 FP_PORT = 29457;
 
 const int NAME_MAX = 127;
 
@@ -19,10 +22,12 @@ typedef struct
 //*****************************************************************************
 int main( int argc, char *argv[] )
 {
-QLocalSocket sock;
+QHostAddress hostAddr = QHostAddress::LocalHost;
+QUdpSocket udp;
 t_CheckIn checkIn;
 int checkInSize = sizeof(checkIn);
 bool sentOK = false;
+
 
     //*** check for valid # parameters ***
     if ( argc < 4 )
@@ -33,16 +38,6 @@ bool sentOK = false;
 
 //    printf( "1: %s\n2: %s\n3: %s\n", argv[1], argv[2], argv[3] );
 
-    //*** connect to the checkin server socket ***
-    sock.connectToServer( FP_PIPE_NAME, QIODevice::WriteOnly );
-
-    //*** wait for the connection ***
-    if ( !sock.waitForConnected( 5000 ) )
-    {
-        printf( "Timeout connecting to checkin server\n" );
-        return -2;
-    }
-
     //*** set up data to be sent to checkin server ***
     memset( &checkIn, 0, checkInSize );
 
@@ -52,7 +47,7 @@ bool sentOK = false;
     checkIn.day = QDate::currentDate().toJulianDay();
 
     //*** send the data ***
-    sentOK = (sock.write( (const char*)&checkIn, checkInSize ) == checkInSize );
+    sentOK = (udp.writeDatagram( (const char*)&checkIn, checkInSize, hostAddr, FP_PORT ) == checkInSize );
 
     if ( !sentOK )
     {
@@ -61,9 +56,6 @@ bool sentOK = false;
     }
 
     printf( "Checkin data sent...\n" );
-
-    //*** done with local socket ***
-    sock.disconnectFromServer();
 
     return 0;
 }
